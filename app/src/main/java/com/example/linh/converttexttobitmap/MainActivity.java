@@ -4,10 +4,13 @@ import android.content.ClipData;
 import android.content.ClipDescription;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Layout;
+import android.text.StaticLayout;
 import android.util.Log;
 import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -33,7 +36,6 @@ public class MainActivity extends AppCompatActivity{
     @BindView(R.id.btn)
     Button mBtn;
 
-    private android.widget.FrameLayout.LayoutParams layoutParams;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,18 +50,19 @@ public class MainActivity extends AppCompatActivity{
 //            }
 //        });
 
-        mTxt.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                ClipData.Item item = new ClipData.Item((CharSequence)v.getTag());
-                String[] mimeTypes = {ClipDescription.MIMETYPE_TEXT_PLAIN};
+//        mTxt.setOnLongClickListener(new View.OnLongClickListener() {
+//            @Override
+//            public boolean onLongClick(View v) {
+//                ClipData.Item item = new ClipData.Item((CharSequence)v.getTag());
+//                String[] mimeTypes = {ClipDescription.MIMETYPE_TEXT_PLAIN};
+//
+//                ClipData dragData = new ClipData(v.getTag().toString(), mimeTypes, item);
+//                View.DragShadowBuilder myShadow = new View.DragShadowBuilder(mTxt);
+//                v.startDrag(dragData, myShadow, null, 0);
+//                return true;
+//            }
+//        });
 
-                ClipData dragData = new ClipData(v.getTag().toString(),mimeTypes, item);
-                View.DragShadowBuilder myShadow = new View.DragShadowBuilder(mTxt);
-                v.startDrag(dragData, myShadow, null, 0);
-                return true;
-            }
-        });
 
         mTxt.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -67,30 +70,31 @@ public class MainActivity extends AppCompatActivity{
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     ClipData data = ClipData.newPlainText("", "");
                     View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(mTxt);
-                    mTxt.startDrag(data, shadowBuilder, mTxt, 0);
-//                    mTxt.setVisibility(View.INVISIBLE);
+                    v.startDrag(data, shadowBuilder, mTxt, 0);
+                    mTxt.setAlpha(0f);
                     return true;
+                }else{
+                    return false;
                 }
-
-                return false;
             }
         });
 
-        mTxt.setOnDragListener(new View.OnDragListener() {
+        ((FrameLayout)mTxt.getParent()).setOnDragListener(new View.OnDragListener() {
             int x_cord;
             int y_cord;
             int deltaX;
             int deltaY;
+            View draggedView;
             @Override
             public boolean onDrag(View v, DragEvent event) {
                 switch(event.getAction()) {
                     case DragEvent.ACTION_DRAG_STARTED:
-                        layoutParams = (FrameLayout.LayoutParams)v.getLayoutParams();
                         Log.d(TAG, "Action is DragEvent.ACTION_DRAG_STARTED");
+                        draggedView = (View) event.getLocalState();
                         x_cord = (int) event.getX();
                         y_cord = (int) event.getY();
-                        deltaX = x_cord - v.getLeft();
-                        deltaY = y_cord - v.getTop();
+                        deltaX = x_cord - draggedView.getLeft();
+                        deltaY = y_cord - draggedView.getTop();
                         // Do nothing
                         break;
 
@@ -110,26 +114,39 @@ public class MainActivity extends AppCompatActivity{
                         break;
 
                     case DragEvent.ACTION_DRAG_LOCATION  :
-                        Log.d(TAG, "Action is DragEvent.ACTION_DRAG_LOCATION");
                         x_cord = (int) event.getX();
                         y_cord = (int) event.getY();
+                        Log.d(TAG, "Action is DragEvent.ACTION_DRAG_LOCATION");
                         Log.d(TAG, "x_cord " + x_cord);
                         Log.d(TAG, "y_cord " + y_cord);
                         break;
 
                     case DragEvent.ACTION_DRAG_ENDED   :
                         Log.d(TAG, "Action is DragEvent.ACTION_DRAG_ENDED");
-                        layoutParams.leftMargin = x_cord - deltaX;
-                        layoutParams.topMargin = y_cord;
-                        Log.d(TAG, "leftMargin "+ (x_cord - deltaX));
-                        Log.d(TAG, "topMargin "+ y_cord);
-                        v.setVisibility(View.VISIBLE);
+                        x_cord = (int) event.getX();
+                        y_cord = (int) event.getY();
+
+                        Log.d(TAG, "x_cord "+ x_cord);
+                        Log.d(TAG, "y_cord "+ y_cord);
                         // Do nothing
                         break;
 
                     case DragEvent.ACTION_DROP:
-                        Log.d(TAG, "ACTION_DROP event");
+                        x_cord = (int) event.getX();
+                        y_cord = (int) event.getY();
 
+                        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) draggedView.getLayoutParams();
+                        int halfWidth = (int) (draggedView.getWidth() * 0.5f);
+                        int halfHeight = (int) (draggedView.getHeight() * 0.5f);
+                        layoutParams.setMargins(x_cord - halfWidth, y_cord - halfHeight, 0, 0);
+                        draggedView.requestLayout();
+                        draggedView.setAlpha(1f);
+
+                        Log.d(TAG, "DragEvent.ACTION_DROP");
+                        Log.d(TAG, "x_cord "+ x_cord);
+                        Log.d(TAG, "y_cord "+ y_cord);
+                        Log.d(TAG, "deltaX "+ deltaX);
+                        Log.d(TAG, "deltaY "+ deltaY);
                         // Do nothing
                         break;
                     default: break;
